@@ -16,10 +16,11 @@ coordinate_grid = {
     210:(  7.5, 387.5), 211:( 32.5, 387.5), 212:( 57.5, 387.5), 213:( 82.5, 387.5), 214:(107.5, 387.5), 215:(132.5, 387.5), 216:(157.5, 387.5), 217:(182.5, 387.5), 218:(207.5, 387.5), 219:(232.5, 387.5), 220:(257.5, 387.5), 221:(282.5, 387.5), 222:(307.5, 387.5), 223:(332.5, 387.5), 224:(357.5, 387.5), 
 }
 
-from PyQt5.QtWidgets import (QWidget, QDesktopWidget, QLabel,
+from PyQt5.QtWidgets import (QWidget, QDesktopWidget, QLabel, QMessageBox,
 QApplication, QToolTip, QPushButton)
 from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from math import ceil
 
 class DYYLGUI(QWidget):
 
@@ -27,40 +28,21 @@ class DYYLGUI(QWidget):
         super().__init__()
 
         self.is_black_turn = [True]     # 可变对象
+        self.game_over = False
         self.label_p = {}
+        self.fen = '0' * 225
         
         self.initUI()
 
     def initUI(self):
+
         self.resize(390, 420)
         self.center()
         self.setWindowTitle('独饮一凉')
         self.setWindowIcon(QIcon('茶.png'))
-
-        newgame = QPushButton('新的对局', self)
-        newgame.setToolTip('建立一盘新的对局')
-        newgame.resize(newgame.sizeHint())
-        newgame.move(10, 10)
-
-        computerblack = QPushButton('电脑执黑', self)
-        computerblack.resize(computerblack.sizeHint())
-        computerblack.move(90, 10)
-
-        computerwhite = QPushButton('电脑执白', self)
-        computerwhite.resize(computerwhite.sizeHint())
-        computerwhite.move(170, 10)
-
-        pix = QPixmap('棋盘.png')
-        lb1 = QLabel(self)
-        lb1.setGeometry(20, 50, 350, 350)
-        lb1.setPixmap(pix)
-        lb1.setScaledContents(True)
-
-        #clickable = QLabel(self)
-        #clickable.setGeometry(182.5, 212.5, 25, 25)
-
+        self.setBoardMap()
         self.BuildLabel()
-
+        self.setButtons()
         self.show()
 
     def center(self):
@@ -72,28 +54,110 @@ class DYYLGUI(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def setBoardMap(self):
+        pix = QPixmap('棋盘.png')
+        lb1 = QLabel(self)
+        lb1.setGeometry(20, 50, 350, 350)
+        lb1.setPixmap(pix)
+        lb1.setScaledContents(True)
+
+    def setButtons(self):
+        newgame = QPushButton('新的对局', self)
+        newgame.setToolTip('建立一盘新的对局')
+        newgame.resize(newgame.sizeHint())
+        newgame.move(10, 10)
+        newgame.clicked.connect(self.BuildNewGame)
+
+        computerblack = QPushButton('电脑执黑', self)
+        computerblack.resize(computerblack.sizeHint())
+        computerblack.move(90, 10)
+
+        computerwhite = QPushButton('电脑执白', self)
+        computerwhite.resize(computerwhite.sizeHint())
+        computerwhite.move(170, 10)
+
+    @pyqtSlot()
+    def BuildNewGame(self):
+        self.is_black_turn[0] = True
+        self.fen = '0' * 225
+        for i in range(225):
+            self.label_p['cross'+str(i)].setPixmap(QPixmap(''))
+            self.label_p['cross'+str(i)].occupied = False
+
     def BuildLabel(self):
         for i in range(225):
-            self.label_p['cross'+str(i)] = PieceLabel(self, self.is_black_turn)
+            self.label_p['cross'+str(i)] = PieceLabel(self, i, self.is_black_turn)
             self.label_p['cross'+str(i)].setGeometry(coordinate_grid[i][0], coordinate_grid[i][1], 25, 25)
             # 将鼠标事件与交换行棋槽函数连接
-            self.label_p['cross'+str(i)].switch_signal.connect(self.SwitchTurn)
+            self.label_p['cross'+str(i)].switch_signal.connect(self.NextStep)
+
+    def NextStep(self, cor_grid = None):
+        self.UpdateFen(cor_grid)
+        self.JudgeVictory(cor_grid)
+        self.SwitchTurn()
+
+    def UpdateFen(self, cor_grid):
+        if self.is_black_turn[0]:
+            self.fen = self.fen[:cor_grid] + '1' + self.fen[cor_grid+1:]
+        else:
+            self.fen = self.fen[:cor_grid] + '2' + self.fen[cor_grid+1:]
 
     def SwitchTurn(self):
         if self.is_black_turn[0]:
             self.is_black_turn[0] = False
         else:
-            self.is_black_turn[0] = True
+            self.is_black_turn[0] = True       
+    
+    def JudgeVictory(self, cor_grid):
+        final_result = None
+
+        if self.fen.count('1') < 5:
+            return
+        if self.fen.count('0') == 0:
+            self.ResultMessage
+        
+        # 横向判定
+        leftside = cor_grid - cor_grid % 15
+        row = self.fen[leftside:leftside+15]
+        # 纵向判定
+        topside = cor_grid % 15
+        line = self.fen[topside::15]
+        # 左斜判定
+        topleftside = cor_grid % 16 if cor_grid % 15 > cor_grid % 16 \
+            else (16 - cor_grid % 16) * 15
+        topleft = self.fen[topleftside::16]
+        if topleftside < 15:
+            topleft = topleft[:15-topleftside]  # 除去斜侧换行左移的坐标
+        # 右斜判定
+        toprightside = cor_grid % 14 if cor_grid % 14 > cor_grid % 15 \
+            else cor_grid % 14 * 15 + 14
+        topright = self.fen[toprightside::14]
+        if toprightside < 15:
+            topright = topright[:toprightside+1]    # 除去斜侧换行右移的坐标
+        
+        if any(self.fen[cor_grid]*5 in anydirections \
+            for anydirections in [row, line, topleft, topright]):
+            self.ResultMessage(is_draw = False)
+    
+    def ResultMessage(self, is_draw = None):
+        if is_draw:
+            winner = '和棋'
+        elif self.is_black_turn[0]:
+            winner = '黑棋赢'
+        else:
+            winner = '白棋赢'
+        self.result = QMessageBox.information(self, '提示', winner)
 
 class PieceLabel(QLabel):
     
-    # 声明信号——传递交换行棋信号
-    switch_signal = pyqtSignal()
+    # 声明信号——传递交换行棋信号并判断胜负
+    switch_signal = pyqtSignal(int)
 
-    def __init__(self, parent = None, is_black_turn = [True]):
+    def __init__(self, parent = None, cor_grid = None, is_black_turn = [True]):
         super().__init__(parent)
         self.occupied = False
         self.is_black_turn = is_black_turn
+        self.cor_grid = cor_grid
 
     def mousePressEvent(self, e):
         if not self.occupied:
@@ -106,7 +170,7 @@ class PieceLabel(QLabel):
             self.occupied = True
 
             # 发送信号
-            self.switch_signal.emit()
+            self.switch_signal.emit(self.cor_grid)
          
 if __name__ == '__main__':
     import sys
