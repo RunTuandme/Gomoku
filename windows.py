@@ -38,8 +38,8 @@ class DYYLGUI(QWidget):
 
         self.resize(390, 420)
         self.center()
-        self.setWindowTitle('独饮一凉')
-        self.setWindowIcon(QIcon('茶.png'))
+        self.setWindowTitle('picture/独饮一凉')
+        self.setWindowIcon(QIcon('picture/茶.png'))
         self.setBoardMap()
         self.BuildLabel()
         self.setButtons()
@@ -55,7 +55,7 @@ class DYYLGUI(QWidget):
         self.move(qr.topLeft())
 
     def setBoardMap(self):
-        pix = QPixmap('棋盘.png')
+        pix = QPixmap('picture/棋盘.png')
         lb1 = QLabel(self)
         lb1.setGeometry(20, 50, 350, 350)
         lb1.setPixmap(pix)
@@ -162,9 +162,9 @@ class PieceLabel(QLabel):
     def mousePressEvent(self, e):
         if not self.occupied:
             if self.is_black_turn[0]:
-                piece = QPixmap('黑色棋子.png')
+                piece = QPixmap('picture/黑色棋子.png')
             else:
-                piece = QPixmap('白色棋子.png')
+                piece = QPixmap('picture/白色棋子.png')
             self.setPixmap(piece)
             self.setScaledContents(True)
             self.occupied = True
