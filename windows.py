@@ -31,6 +31,7 @@ class DYYLGUI(QWidget):
         self.game_over = False
         self.label_p = {}
         self.fen = '0' * 225
+        self.history = [self.fen]
         
         self.initUI()
 
@@ -38,7 +39,7 @@ class DYYLGUI(QWidget):
 
         self.resize(390, 420)
         self.center()
-        self.setWindowTitle('picture/独饮一凉')
+        self.setWindowTitle('独饮一凉')
         self.setWindowIcon(QIcon('picture/茶.png'))
         self.setBoardMap()
         self.BuildLabel()
@@ -76,6 +77,11 @@ class DYYLGUI(QWidget):
         computerwhite.resize(computerwhite.sizeHint())
         computerwhite.move(170, 10)
 
+        undo = QPushButton('悔棋', self)
+        undo.resize(undo.sizeHint())
+        undo.move(250,10)
+        undo.clicked.connect(self.Undo)
+
     @pyqtSlot()
     def BuildNewGame(self):
         self.is_black_turn[0] = True
@@ -83,6 +89,16 @@ class DYYLGUI(QWidget):
         for i in range(225):
             self.label_p['cross'+str(i)].setPixmap(QPixmap(''))
             self.label_p['cross'+str(i)].occupied = False
+
+    def Undo(self):
+        if len(self.history) > 1:
+            donefen = self.history.pop()
+            self.fen = self.history[-1]
+            for i in range(225):
+                if self.fen[i] != donefen[i]:
+                    self.label_p['cross'+str(i)].setPixmap(QPixmap(''))
+                    self.label_p['cross'+str(i)].occupied = False
+            self.SwitchTurn()
 
     def BuildLabel(self):
         for i in range(225):
@@ -101,6 +117,9 @@ class DYYLGUI(QWidget):
             self.fen = self.fen[:cor_grid] + '1' + self.fen[cor_grid+1:]
         else:
             self.fen = self.fen[:cor_grid] + '2' + self.fen[cor_grid+1:]
+
+        # 记录历史棋谱
+        self.history.append(self.fen)
 
     def SwitchTurn(self):
         if self.is_black_turn[0]:
