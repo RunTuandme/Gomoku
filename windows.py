@@ -19,8 +19,9 @@ coordinate_grid = {
 from PyQt5.QtWidgets import (QWidget, QDesktopWidget, QLabel, QMessageBox,
 QApplication, QToolTip, QPushButton)
 from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QCoreApplication, Qt
 from math import ceil
+from easyengine import SampleEngine
 
 class DYYLGUI(QWidget):
 
@@ -30,8 +31,10 @@ class DYYLGUI(QWidget):
         self.is_black_turn = [True]     # 可变对象
         self.game_over = False
         self.label_p = {}
-        self.fen = '0' * 225
+        self.fen = '0' * 225            # '0'为空，'1'为黑棋，'2'为白棋
         self.history = [self.fen]
+        self.black_engine = False
+        self.white_engine = False
         
         self.initUI()
 
@@ -69,18 +72,22 @@ class DYYLGUI(QWidget):
         newgame.move(10, 10)
         newgame.clicked.connect(self.BuildNewGame)
 
-        computerblack = QPushButton('电脑执黑', self)
-        computerblack.resize(computerblack.sizeHint())
-        computerblack.move(90, 10)
-
-        computerwhite = QPushButton('电脑执白', self)
-        computerwhite.resize(computerwhite.sizeHint())
-        computerwhite.move(170, 10)
-
         undo = QPushButton('悔棋', self)
         undo.resize(undo.sizeHint())
-        undo.move(250,10)
+        undo.move(90,10)
         undo.clicked.connect(self.Undo)
+
+        computerblack = QPushButton('电脑执黑', self)
+        computerblack.setCheckable(True)
+        computerblack.resize(computerblack.sizeHint())
+        computerblack.move(170, 10)
+        computerblack.toggled.connect(self.BlackEngineOn)
+
+        computerwhite = QPushButton('电脑执白', self)
+        computerwhite.setCheckable(True)
+        computerwhite.resize(computerwhite.sizeHint())
+        computerwhite.move(250, 10)
+        computerwhite.toggled.connect(self.WhiteEngineOn)
 
     @pyqtSlot()
     def BuildNewGame(self):
@@ -89,7 +96,31 @@ class DYYLGUI(QWidget):
         for i in range(225):
             self.label_p['cross'+str(i)].setPixmap(QPixmap(''))
             self.label_p['cross'+str(i)].occupied = False
+    
+    def BlackEngineOn(self):
+        self.Engine()
+        self.black_engine = True
 
+    def WhiteEngineOn(self):
+        self.Engine()
+        self.white_engine = True
+
+    def Engine(self):
+        obj = SampleEngine(self.fen, self.is_black_turn)
+        dropped = obj.run()  # 返回int类型，0-224
+
+        # 显示棋子并占位
+        if not self.label_p['cross'+str(dropped)].occupied:
+            if self.is_black_turn[0]:
+                piece = QPixmap('picture/黑色棋子.png')
+            else:
+                piece = QPixmap('picture/白色棋子.png')
+            self.label_p['cross'+str(dropped)].setPixmap(piece)
+            self.label_p['cross'+str(dropped)].setScaledContents(True)
+        
+        # 下一步
+        self.NextStep(dropped)
+            
     def Undo(self):
         if len(self.history) > 1:
             donefen = self.history.pop()
@@ -111,6 +142,7 @@ class DYYLGUI(QWidget):
         self.UpdateFen(cor_grid)
         self.JudgeVictory(cor_grid)
         self.SwitchTurn()
+        self.CheckEngine()
 
     def UpdateFen(self, cor_grid):
         if self.is_black_turn[0]:
@@ -125,7 +157,13 @@ class DYYLGUI(QWidget):
         if self.is_black_turn[0]:
             self.is_black_turn[0] = False
         else:
-            self.is_black_turn[0] = True       
+            self.is_black_turn[0] = True  
+
+    def CheckEngine(self):
+        if self.is_black_turn[0] and self.black_engine:
+            self.Engine()
+        if self.is_black_turn[0] == False and self.white_engine:
+            self.Engine()     
     
     def JudgeVictory(self, cor_grid):
         final_result = None
@@ -193,6 +231,7 @@ class PieceLabel(QLabel):
          
 if __name__ == '__main__':
     import sys
+    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     ex = DYYLGUI()
     sys.exit(app.exec_())
