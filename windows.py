@@ -1,3 +1,8 @@
+'''
+    This is a simple Gobang interface.
+    By : RunTuandme
+'''
+
 coordinate_grid = {
     0:(  7.5,  37.5),   1:( 32.5,  37.5),   2:( 57.5,  37.5),   3:( 82.5,  37.5),   4:(107.5,  37.5),   5:(132.5,  37.5),   6:(157.5,  37.5),   7:(182.5,  37.5),   8:(207.5,  37.5),   9:(232.5,  37.5),  10:(257.5,  37.5),  11:(282.5,  37.5),  12:(307.5,  37.5),  13:(332.5,  37.5),  14:(357.5,  37.5), 
     15:(  7.5,  62.5),  16:( 32.5,  62.5),  17:( 57.5,  62.5),  18:( 82.5,  62.5),  19:(107.5,  62.5),  20:(132.5,  62.5),  21:(157.5,  62.5),  22:(182.5,  62.5),  23:(207.5,  62.5),  24:(232.5,  62.5),  25:(257.5,  62.5),  26:(282.5,  62.5),  27:(307.5,  62.5),  28:(332.5,  62.5),  29:(357.5,  62.5), 
@@ -98,11 +103,13 @@ class DYYLGUI(QWidget):
             self.label_p['cross'+str(i)].occupied = False
     
     def BlackEngineOn(self):
-        self.Engine()
+        if self.is_black_turn[0]:
+            self.Engine()
         self.black_engine = True
 
     def WhiteEngineOn(self):
-        self.Engine()
+        if not self.is_black_turn[0]:
+            self.Engine()
         self.white_engine = True
 
     def Engine(self):
