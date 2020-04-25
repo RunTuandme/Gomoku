@@ -27,6 +27,7 @@ from PyQt5.QtGui import (QIcon, QPixmap)
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QCoreApplication, Qt
 from math import ceil
 from easyengine import SampleEngine
+from ABengine import AlphaBetaEngine
 
 class DYYLGUI(QWidget):
 
@@ -113,8 +114,8 @@ class DYYLGUI(QWidget):
         self.white_engine = True
 
     def Engine(self):
-        obj = SampleEngine(self.fen, self.is_black_turn)
-        dropped = obj.run()  # 返回int类型，0-224
+        obj = AlphaBetaEngine(self.fen, self.is_black_turn)
+        dropped = obj.Run()  # 返回int类型，0-224
 
         # 显示棋子并占位
         if not self.label_p['cross'+str(dropped)].occupied:

@@ -38,7 +38,7 @@ class AlphaBetaEngine:
         self.board = []         # 建立二维棋盘数组
 
         self.FenTo2d()
-        self.PiecesDivide()
+        self.Run()
 
     def FenTo2d(self):
         for i in range(0, 225, 15):
@@ -65,38 +65,42 @@ class AlphaBetaEngine:
         
         return [legal_moves, black_pieces, white_pieces]
                 
-    def Get4L(self, line, column):
+    def Get4L(self, state = None, line = 0, column = 0):
         # 功能：取某一点的横、竖、左斜、右斜方向的棋子列表
         # return: [横，竖，左斜，右斜]
 
         aim = []
-        aim.append(self.board[line])
+        aim.append(state[line])
 
         col = ''
-        for x in self.board:
+        for x in state:
             col += x[column]
         aim.append(col)
 
         pos_x, pos_y = line, column
         left = ''
         while pos_x > 0 and pos_y > 0:
-            left += self.board[pos_x][pos_y]
+            left += state[pos_x][pos_y]
             pos_x -= 1
             pos_y -= 1
         pos_x, pos_y = line, column
         while pos_x < 15 and pos_y < 15:
-            left += self.board[pos_x][pos_y]
+            left += state[pos_x][pos_y]
+            pos_x += 1
+            pos_y += 1
         aim.append(left)
 
         pos_x, pos_y = line, column
         right = ''
         while pos_x > 0 and pos_y < 15:
-            right += self.board[pos_x][pos_y]
+            right += state[pos_x][pos_y]
             pos_x -= 1
-            pos_y -= 1
+            pos_y += 1
         pos_x, pos_y = line, column
         while pos_x < 15 and pos_y > 0:
-            right += self.board[pos_x][pos_y]
+            right += state[pos_x][pos_y]
+            pos_x += 1
+            pos_y -= 1
         aim.append(right)
 
         return aim
@@ -105,16 +109,16 @@ class AlphaBetaEngine:
         # 功能：与shape_score列表匹配
 
         score = 0
-        if self.black_turn:
+        if black_turn:
             for x in line_state:
-                for shape in shape_score_black:
-                    if x.find(shape):
-                        score += shape.value
+                for shape, v in shape_score_black.items():
+                    if x.find(shape) != -1:
+                        score += v
         else:
             for x in line_state:
-                for shape in shape_score_white:
-                    if x.find(shape):
-                        score += shape.value
+                for shape, v in shape_score_white.items():
+                    if x.find(shape) != -1:
+                        score += v
         return score
 
     def evaluation(self, state = None, is_black_turn = True):
@@ -127,18 +131,44 @@ class AlphaBetaEngine:
         white_score = 0
 
         for p in pieces[1]:
-            all_directions = self.Get4L(p[0], p[1])
-            black_score += self.Pick(all_directions, black_turn = is_black_turn)
+            all_directions = self.Get4L(state, p[0], p[1])
+            black_score += self.Pick(all_directions, black_turn = True)
         for p in pieces[2]:
-            all_directions = self.Get4L(p[0], p[1])
-            white_score += self.Pick(all_directions, black_turn = is_black_turn)
+            all_directions = self.Get4L(state, p[0], p[1])
+            white_score += self.Pick(all_directions, black_turn = False)
         
         if is_black_turn:
             return black_score - white_score
         else:
             return white_score - black_score
 
+    def BestMove(self, state = None, is_black_turn = True):
+        # 功能: 返回state局面下最佳招法
+        # return：e.g(1,2)
+
+        pieces = self.PiecesDivide(state)
+        values = {}
+
+        if is_black_turn:
+            dropped = '1'
+        else:
+            dropped = '2'
+        
+        for p in pieces[0]:
+            copy = state.copy()
+            copy[p[0]] = copy[p[0]][:p[1]] + dropped + copy[p[0]][p[1]+1:]
+            score = self.evaluation(copy, is_black_turn)
+            values.update({p:score})
+
+        return max(values, key = values.get)
+
+    def Run(self):
+        if self.fen == '0' * 225:
+            return 112
+        move = self.BestMove(self.board, self.is_black_turn[0])
+        return move[0] * 15 + move[1]
+
 if __name__ == '__main__':
-    fen = '0' * 225
-    ex = AlphaBetaEngine(fen, [True])
-    
+    fen = '2'+'0'*100+'1'*2+'0'*122
+    ex = AlphaBetaEngine(fen, [False])
+    a = 0

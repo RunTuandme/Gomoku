@@ -11,7 +11,7 @@ class SampleEngine:
         self.fen = fen 
         self.is_black_turn = is_black_turn
 
-    def run(self):
+    def Run(self):
         container = []
         pos = 0
         for i in self.fen:
