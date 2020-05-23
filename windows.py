@@ -188,13 +188,13 @@ class DYYLGUI(QWidget):
         topside = cor_grid % 15
         line = self.fen[topside::15]
         # 左斜判定
-        topleftside = cor_grid % 16 if cor_grid % 15 > cor_grid % 16 \
+        topleftside = cor_grid % 16 if cor_grid % 15 >= cor_grid % 16 \
             else (16 - cor_grid % 16) * 15
         topleft = self.fen[topleftside::16]
         if topleftside < 15:
             topleft = topleft[:15-topleftside]  # 除去斜侧换行左移的坐标
         # 右斜判定
-        toprightside = cor_grid % 14 if cor_grid % 14 > cor_grid % 15 \
+        toprightside = cor_grid % 14 if cor_grid % 14 >= cor_grid % 15 \
             else cor_grid % 14 * 15 + 14
         topright = self.fen[toprightside::14]
         if toprightside < 15:

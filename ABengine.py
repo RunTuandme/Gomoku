@@ -142,9 +142,9 @@ class AlphaBetaEngine:
         else:
             return white_score - black_score
 
-    def BestMove(self, state = None, is_black_turn = True):
-        # 功能: 返回state局面下最佳招法
-        # return：e.g(1,2)
+    def Moves(self, state = None, is_black_turn = True):
+        # 功能: 返回state局面下策略价值
+        # return：(dict) e.g{(1,2):300,(3,3):350,...}
 
         pieces = self.PiecesDivide(state)
         values = {}
@@ -160,13 +160,26 @@ class AlphaBetaEngine:
             score = self.evaluation(copy, is_black_turn)
             values.update({p:score})
 
+        return values
+
         return max(values, key = values.get)
+
+    def Negamax(self, state, depth, alpha, beta, is_black_turn = True):
+        # 极大值极小值搜索 + αβ剪枝
+        if self.GameOver() or depth == 0:
+            return self.evaluation(state, is_black_turn)
+        pieces = self.PiecesDivide(state)
 
     def Run(self):
         if self.fen == '0' * 225:
             return 112
-        move = self.BestMove(self.board, self.is_black_turn[0])
+
+        copy_board = self.board.copy()
+        moves = self.Moves(copy_board, self.is_black_turn[0])
+        move = max(moves, key = moves.get)  # 取moves中value最大的招法
         return move[0] * 15 + move[1]
+
+    
 
 if __name__ == '__main__':
     fen = '2'+'0'*100+'1'*2+'0'*122
