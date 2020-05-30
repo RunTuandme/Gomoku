@@ -29,20 +29,35 @@ shape_score_white = {
     '002200' : 50,
     '02020'  : 50
     }
+
+import numpy as np
                 
 class AlphaBetaEngine:
 
     def __init__(self, fen = None, is_black_turn = [True]):
         self.fen = fen
         self.is_black_turn = is_black_turn
-        self.board = []         # 建立二维棋盘数组
+        self.board = []         # 建立二维棋盘数组1：[['01000010...'],[...]...]
+        self.div_board = []     # 建立二维棋盘数组2：[['0','1','0',...],[...]...]
 
         self.FenTo2d()
+        self.DivideBoard()
         self.Run()
 
     def FenTo2d(self):
+        # board:[['01000010...'],[...]...]
         for i in range(0, 225, 15):
             self.board.append(self.fen[i:i+15])
+
+    def DivideBoard(self):
+        # board:[['01000010...'],[...]...]
+        # div_board:[['0','1','0',...],[...]...]
+        self.div_board = []
+        for line in self.board:
+            each = []
+            for i in line:
+                each.append(i)
+            self.div_board.append(each)
 
     def PiecesDivide(self, board_fen = None):
         # 功能：计算所有合法落子、黑棋、白棋位置
@@ -163,20 +178,104 @@ class AlphaBetaEngine:
         return values
 
         return max(values, key = values.get)
+            
+    def Judge5(self, s):
+        # 功能：给定字符串s，判断是否有五子连珠
+        black = '11111'
+        white = '22222'
+        if black in s:
+            return True
+        elif white in s:
+            return True
+        else:
+            return False
+
+    def GameOver(self):
+        # 功能：判断游戏是否结束
+        db = np.array(self.div_board)
+
+        # 横
+        for line in db:
+            judge = ''
+            for elem in line:
+                judge += elem
+            if self.Judge5(judge):
+                return True
+
+        # 纵
+        for i in range(15):
+            judge = ''
+            for elem in db[:,i]:
+                judge += elem
+            if self.Judge5(judge):
+                return True
+
+        # 左斜
+        for i in range(21):
+            judge = ''
+            for elem in db.diagonal(i-10):
+                judge += elem
+            if self.Judge5(judge):
+                return True
+        
+        # 右斜
+        for i in range(21):
+            judge = ''
+            for elem in np.diag(np.fliplr(db),i-10):
+                judge += elem
+            if self.Judge5(judge):
+                return True
+        
+        if '0' not in self.fen:
+            return True
+
+        return False
+
+    def UpdateBoard(self, state, move, is_black_turn):
+        # move: (3,4) ; state: 当前局面(board)
+        # 功能：根据落子位置生成新board
+        # return：board
+        if state[move[0]][move[1]] == '0':
+            if is_black_turn:
+                state[move[0]]= state[move[0]][:move(1)] + '1' + state[move[0]][move[1]+1:]
+            else:
+                state[move[0]]= state[move[0]][:move(1)] + '2' + state[move[0]][move[1]+1:]
+            return state
 
     def Negamax(self, state, depth, alpha, beta, is_black_turn = True):
         # 极大值极小值搜索 + αβ剪枝
         if self.GameOver() or depth == 0:
             return self.evaluation(state, is_black_turn)
-        pieces = self.PiecesDivide(state)
+        pieces = self.PiecesDivide(state)   # 生成合理招法
+        copy_board = state.copy()
+        
+        while pieces[0] != []:
+            # 生成下一步
+            move = self.MakeNextMove(state, is_black_turn)
+            copy_board = self.UpdateBoard(copy_board, move, is_black_turn)
+            is_black_turn = not is_black_turn
+            val = -self.Negamax(copy_board, depth-1, -alpha, -beta, is_black_turn)
+            if val >= beta:
+                return beta
+            if val > alpha:
+                alpha = val
+        
+        return alpha
+
+    def MakeNextMove(self, state, is_black_turn):
+        # state：当前局面(board)
+        # 功能： 选择下一步棋子的最佳招法
+        # return： e.g(1,2)
+        copy_board = state.copy()
+        moves = self.Moves(copy_board, is_black_turn)
+        move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        return move
 
     def Run(self):
         if self.fen == '0' * 225:
             return 112
 
-        copy_board = self.board.copy()
-        moves = self.Moves(copy_board, self.is_black_turn[0])
-        move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        move = self.MakeNextMove(self.board, self.is_black_turn[0])
         return move[0] * 15 + move[1]
 
     

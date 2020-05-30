@@ -162,10 +162,7 @@ class DYYLGUI(QWidget):
         self.history.append(self.fen)
 
     def SwitchTurn(self):
-        if self.is_black_turn[0]:
-            self.is_black_turn[0] = False
-        else:
-            self.is_black_turn[0] = True  
+        self.is_black_turn[0] = not self.is_black_turn[0]
 
     def CheckEngine(self):
         if self.is_black_turn[0] and self.black_engine:
