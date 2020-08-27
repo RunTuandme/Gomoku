@@ -35,6 +35,7 @@ shape_score_white = {
     }
 
 import numpy as np
+from profilehooks import profile
 
 class Node:
     def __init__(self, state: list = None, is_black_turn = True):
@@ -197,7 +198,13 @@ class AlphaBetaEngine:
 
         return values
         # return max(values, key = values.get)
-            
+
+    def LegalMoves(self, state: list, is_black_turn) -> list:
+        # 功能: 返回state局面下所有合法策略
+        # return: [(1,2), (3,3), ...]
+
+        return self.PiecesDivide(state)[0]
+        
     def Judge5(self, s: str) -> bool:
         # 功能：给定字符串s，判断是否有五子连珠
         black = '11111'
@@ -265,54 +272,67 @@ class AlphaBetaEngine:
                 copy_board[move[0]]= copy_board[move[0]][:move[1]] + '2' + copy_board[move[0]][move[1]+1:]
             return copy_board
 
+    @profile
     def AlphaBeta(self, state: list, depth: int, is_black_turn: bool, 
                   alpha = float('-inf'), beta = float('inf'), 
-                  turn_max_player = True) -> int:
+                  turn_max_player = True) -> tuple:
         # 极大值极小值搜索 + αβ剪枝
         if depth == 0 or self.GameOver(state):
-            return self.evaluation(state = state, is_black_turn = is_black_turn)
+            return (self.evaluation(state = state, is_black_turn = is_black_turn), None)
+
+        return_move = None  # 记录待返回招法
         
         if turn_max_player:
             max_eval = float('-inf')
-            for each_move in self.Moves(state = state, is_black_turn = True):
+            for each_move in self.LegalMoves(state = state, is_black_turn = True):
                 child = self.ChildBoard(state, each_move, is_black_turn)
-                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, False)
+                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, False)[0]
                 alpha = max(alpha, eval)
                 if beta <= alpha:
                     break
-                max_eval = max(max_eval, eval)
-            return max_eval
+                if eval > max_eval:
+                    max_eval = eval
+                    return_move = each_move
+            return (max_eval, each_move)
         else:
             min_eval = float('inf')
-            for each_move in self.Moves(state = state, is_black_turn = False):
+            for each_move in self.LegalMoves(state = state, is_black_turn = False):
                 child = self.ChildBoard(state, each_move, is_black_turn)
-                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, True)
+                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, True)[0]
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
-                min_eval = min(min_eval, eval)
-            return min_eval
+                if eval < min_eval:
+                    min_eval = eval
+                    return_move = each_move
+            return (min_eval, each_move)
         
-
-    def Minimax(self, state: list, depth: int, is_black_turn: bool, turn_max_player = True) -> int:
+    @profile
+    def Minimax(self, state: list, depth: int, is_black_turn: bool, turn_max_player = True) -> tuple:
         # 极大极小值搜索
         if depth == 0 or self.GameOver(state):
-            return self.evaluation(state = state, is_black_turn = is_black_turn)
+            return (self.evaluation(state = state, is_black_turn = is_black_turn), None)
         
+        return_move = None  # 记录待返回招法
+
         if turn_max_player:
             max_eval = float('-inf')
-            for each_move in self.Moves(state = state, is_black_turn = True):
+            for each_move in self.LegalMoves(state = state, is_black_turn = True):
                 child = self.ChildBoard(state, each_move, is_black_turn)
-                eval = self.Minimax(child, depth - 1, not is_black_turn, False)
-                max_eval = max(max_eval, eval)
-            return max_eval
+                eval = self.Minimax(child, depth - 1, not is_black_turn, False)[0]
+                if eval > max_eval:
+                    max_eval = eval
+                    return_move = each_move
+            return (max_eval, each_move)
         else:
             min_eval = float('inf')
-            for each_move in self.Moves(state = state, is_black_turn = False):
+            for each_move in self.LegalMoves(state = state, is_black_turn = False):
                 child = self.ChildBoard(state, each_move, is_black_turn)
-                eval = self.Minimax(child, depth - 1, not is_black_turn, True)
-                min_eval = min(min_eval, eval)
-            return min_eval
+                eval = self.Minimax(child, depth - 1, not is_black_turn, True)[0]
+                if eval < min_eval:
+                    min_eval = eval
+                    return_move = each_move
+            return (min_eval, each_move)
 
     def MakeNextMove(self, state, is_black_turn):
         # state：当前局面(board)
@@ -323,13 +343,10 @@ class AlphaBetaEngine:
         # moves = self.Moves(copy_board, is_black_turn)
         # move = max(moves, key = moves.get)  # 取moves中value最大的招法
         # 方案二： 多层Minimax搜索
-        score = self.Minimax(copy_board, 2, is_black_turn)
-        moves = self.Moves(copy_board, is_black_turn)
-        move = list(moves.keys())[list(moves.values()).index(score)]    # 按值查找第一步招法表键值
+        # score, move = self.Minimax(copy_board, 2, is_black_turn)
         # 方案三： 深层AlphaBeta搜索
-        # score = self.AlphaBeta(copy_board, 10, is_black_turn)
-        # moves = self.Moves(copy_board, is_black_turn)
-        # move = list(moves.keys())[list(moves.values()).index(score)]    # 按值查找第一步招法表键值
+        score, move = self.AlphaBeta(copy_board, 2, is_black_turn)
+
         return move
 
     def Run(self):
@@ -338,10 +355,10 @@ class AlphaBetaEngine:
 
         move = self.MakeNextMove(self.board, self.is_black_turn[0])
         return move[0] * 15 + move[1]
-
     
 
 if __name__ == '__main__':
     fen = '2'+'0'*100+'1'*2+'0'*122
     ex = AlphaBetaEngine(fen, [False])
-    a = 0
+    print ('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    print (ex.Run())
