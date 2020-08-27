@@ -1,3 +1,7 @@
+'''
+    By : RunTuandme
+'''
+
 shape_score_black = {
     '11111'  : 99999,
     '011110' : 9999,
@@ -31,35 +35,51 @@ shape_score_white = {
     }
 
 import numpy as np
+
+class Node:
+    def __init__(self, state: list = None, is_black_turn = True):
+        self.board = state      # 二维棋盘数组1, board[0]为棋盘第一行：[['01000010...'],[...]...]
+        self.is_black_turn = is_black_turn
                 
 class AlphaBetaEngine:
 
-    def __init__(self, fen = None, is_black_turn = [True]):
-        self.fen = fen
+    def __init__(self, fen: str = None, is_black_turn = [True]):
+        self.fen = fen          # 一维棋盘数组：'00120110020...'
         self.is_black_turn = is_black_turn
-        self.board = []         # 建立二维棋盘数组1：[['01000010...'],[...]...]
-        self.div_board = []     # 建立二维棋盘数组2：[['0','1','0',...],[...]...]
+        self.board = []         # 二维棋盘数组1, board[0]为棋盘第一行：[['01000010...'],[...]...]（通用）
+        self.div_board = []     # 二维棋盘数组2，div_board[0]为棋盘第一行：[['0','1','0',...],[...]...] （仅在判断局面结束计算中用到）
 
-        self.FenTo2d()
-        self.DivideBoard()
+        self.board = self.FenTo2d(self.fen)
+        self.div_board = self.DivideBoard(self.board)
         self.Run()
 
-    def FenTo2d(self):
-        # board:[['01000010...'],[...]...]
+    def FenTo2d(self, fen_x: str) -> list:
+        # aim_board:[['01000010...'],[...]...]
+        aim_board = []
         for i in range(0, 225, 15):
-            self.board.append(self.fen[i:i+15])
+            aim_board.append(self.fen[i:i+15])
+        return aim_board
 
-    def DivideBoard(self):
-        # board:[['01000010...'],[...]...]
-        # div_board:[['0','1','0',...],[...]...]
-        self.div_board = []
-        for line in self.board:
+    def Div2dToFen(self, div_board_x: list) -> str:
+        # aim_fen:'00120110020...'
+        aim_fen = ''
+        for line in div_board_x:
+            for each_piece in line:
+                aim_fen += each_piece
+        return aim_fen
+
+    def DivideBoard(self, board_x: list) -> list:
+        # board_x:[['01000010...'],[...]...]
+        # aim_board:[['0','1','0',...],[...]...]
+        aim_board = []
+        for line in board_x:
             each = []
             for i in line:
                 each.append(i)
-            self.div_board.append(each)
+            aim_board.append(each)
+        return aim_board
 
-    def PiecesDivide(self, board_fen = None):
+    def PiecesDivide(self, board_fen: list = None) -> list:
         # 功能：计算所有合法落子、黑棋、白棋位置
         # return：(list)[[legal_moves],[black_pieces],[white_pieces]]
         # e.g[[(1,2),(1,0),...],[(3,4),(3,0),...],[(2,1),(0,2),...]]
@@ -80,7 +100,7 @@ class AlphaBetaEngine:
         
         return [legal_moves, black_pieces, white_pieces]
                 
-    def Get4L(self, state = None, line = 0, column = 0):
+    def Get4L(self, state: list = None, line = 0, column = 0) -> list:
         # 功能：取某一点的横、竖、左斜、右斜方向的棋子列表
         # return: [横，竖，左斜，右斜]
 
@@ -120,8 +140,8 @@ class AlphaBetaEngine:
 
         return aim
 
-    def Pick(self, line_state, black_turn = True):
-        # 功能：与shape_score列表匹配
+    def Pick(self, line_state: list, black_turn = True) -> int:
+        # 功能：与shape_score列表匹配，返回设定评估分值
 
         score = 0
         if black_turn:
@@ -136,20 +156,20 @@ class AlphaBetaEngine:
                         score += v
         return score
 
-    def evaluation(self, state = None, is_black_turn = True):
+    def evaluation(self, state: list = None, is_black_turn = True) -> int:
         # 评估函数
-        # 功能：计算某局面下黑（白）棋分数
-
-        pieces = self.PiecesDivide(state)
+        # 功能：计算某局面下黑（白）棋分数，正数代表当前局面 turn 方为优势
+        copy_board = state.copy()
+        pieces = self.PiecesDivide(copy_board)
 
         black_score = 0
         white_score = 0
 
         for p in pieces[1]:
-            all_directions = self.Get4L(state, p[0], p[1])
+            all_directions = self.Get4L(copy_board, p[0], p[1])
             black_score += self.Pick(all_directions, black_turn = True)
         for p in pieces[2]:
-            all_directions = self.Get4L(state, p[0], p[1])
+            all_directions = self.Get4L(copy_board, p[0], p[1])
             white_score += self.Pick(all_directions, black_turn = False)
         
         if is_black_turn:
@@ -157,7 +177,7 @@ class AlphaBetaEngine:
         else:
             return white_score - black_score
 
-    def Moves(self, state = None, is_black_turn = True):
+    def Moves(self, state: list = None, is_black_turn = True) -> dict:
         # 功能: 返回state局面下策略价值
         # return：(dict) e.g{(1,2):300,(3,3):350,...}
 
@@ -176,10 +196,9 @@ class AlphaBetaEngine:
             values.update({p:score})
 
         return values
-
-        return max(values, key = values.get)
+        # return max(values, key = values.get)
             
-    def Judge5(self, s):
+    def Judge5(self, s: str) -> bool:
         # 功能：给定字符串s，判断是否有五子连珠
         black = '11111'
         white = '22222'
@@ -190,9 +209,12 @@ class AlphaBetaEngine:
         else:
             return False
 
-    def GameOver(self):
+    def GameOver(self, board: list) -> bool:
+        # board：二维棋盘数组1, board[0]为棋盘第一行：[['01000010...'],[...]...]
+        # board_x：二维棋盘数组2，board_x[0]为棋盘第一行：[['0','1','0',...],[...]...]
         # 功能：判断游戏是否结束
-        db = np.array(self.div_board)
+        board_x = self.DivideBoard(board)
+        db = np.array(board_x)
 
         # 横
         for line in db:
@@ -226,49 +248,88 @@ class AlphaBetaEngine:
             if self.Judge5(judge):
                 return True
         
-        if '0' not in self.fen:
+        if '0' not in self.Div2dToFen(board_x):
             return True
 
         return False
 
-    def UpdateBoard(self, state, move, is_black_turn):
+    def ChildBoard(self, state: list, move: tuple, is_black_turn: bool) -> list:
         # move: (3,4) ; state: 当前局面(board)
         # 功能：根据落子位置生成新board
         # return：board
-        if state[move[0]][move[1]] == '0':
-            if is_black_turn:
-                state[move[0]]= state[move[0]][:move(1)] + '1' + state[move[0]][move[1]+1:]
-            else:
-                state[move[0]]= state[move[0]][:move(1)] + '2' + state[move[0]][move[1]+1:]
-            return state
-
-    def Negamax(self, state, depth, alpha, beta, is_black_turn = True):
-        # 极大值极小值搜索 + αβ剪枝
-        if self.GameOver() or depth == 0:
-            return self.evaluation(state, is_black_turn)
-        pieces = self.PiecesDivide(state)   # 生成合理招法
         copy_board = state.copy()
+        if copy_board[move[0]][move[1]] == '0':
+            if is_black_turn:
+                copy_board[move[0]]= copy_board[move[0]][:move[1]] + '1' + copy_board[move[0]][move[1]+1:]
+            else:
+                copy_board[move[0]]= copy_board[move[0]][:move[1]] + '2' + copy_board[move[0]][move[1]+1:]
+            return copy_board
+
+    def AlphaBeta(self, state: list, depth: int, is_black_turn: bool, 
+                  alpha = float('-inf'), beta = float('inf'), 
+                  turn_max_player = True) -> int:
+        # 极大值极小值搜索 + αβ剪枝
+        if depth == 0 or self.GameOver(state):
+            return self.evaluation(state = state, is_black_turn = is_black_turn)
         
-        while pieces[0] != []:
-            # 生成下一步
-            move = self.MakeNextMove(state, is_black_turn)
-            copy_board = self.UpdateBoard(copy_board, move, is_black_turn)
-            is_black_turn = not is_black_turn
-            val = -self.Negamax(copy_board, depth-1, -alpha, -beta, is_black_turn)
-            if val >= beta:
-                return beta
-            if val > alpha:
-                alpha = val
+        if turn_max_player:
+            max_eval = float('-inf')
+            for each_move in self.Moves(state = state, is_black_turn = True):
+                child = self.ChildBoard(state, each_move, is_black_turn)
+                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, False)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+                max_eval = max(max_eval, eval)
+            return max_eval
+        else:
+            min_eval = float('inf')
+            for each_move in self.Moves(state = state, is_black_turn = False):
+                child = self.ChildBoard(state, each_move, is_black_turn)
+                eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, True)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+                min_eval = min(min_eval, eval)
+            return min_eval
         
-        return alpha
+
+    def Minimax(self, state: list, depth: int, is_black_turn: bool, turn_max_player = True) -> int:
+        # 极大极小值搜索
+        if depth == 0 or self.GameOver(state):
+            return self.evaluation(state = state, is_black_turn = is_black_turn)
+        
+        if turn_max_player:
+            max_eval = float('-inf')
+            for each_move in self.Moves(state = state, is_black_turn = True):
+                child = self.ChildBoard(state, each_move, is_black_turn)
+                eval = self.Minimax(child, depth - 1, not is_black_turn, False)
+                max_eval = max(max_eval, eval)
+            return max_eval
+        else:
+            min_eval = float('inf')
+            for each_move in self.Moves(state = state, is_black_turn = False):
+                child = self.ChildBoard(state, each_move, is_black_turn)
+                eval = self.Minimax(child, depth - 1, not is_black_turn, True)
+                min_eval = min(min_eval, eval)
+            return min_eval
 
     def MakeNextMove(self, state, is_black_turn):
         # state：当前局面(board)
         # 功能： 选择下一步棋子的最佳招法
         # return： e.g(1,2)
         copy_board = state.copy()
+        # 方案一： 一层Minimax搜索
+        # moves = self.Moves(copy_board, is_black_turn)
+        # move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        # 方案二： 多层Minimax搜索
+        score = self.Minimax(copy_board, 2, is_black_turn)
         moves = self.Moves(copy_board, is_black_turn)
-        move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        move = list(moves.keys())[list(moves.values()).index(score)]    # 按值查找第一步招法表键值
+        # 方案三： 深层AlphaBeta搜索
+        # score = self.AlphaBeta(copy_board, 10, is_black_turn)
+        # moves = self.Moves(copy_board, is_black_turn)
+        # move = list(moves.keys())[list(moves.values()).index(score)]    # 按值查找第一步招法表键值
         return move
 
     def Run(self):
