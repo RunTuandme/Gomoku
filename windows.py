@@ -114,6 +114,7 @@ class DYYLGUI(QWidget):
         self.white_engine = True
 
     def Engine(self):
+        # 引擎计算
         obj = AlphaBetaEngine(self.fen, self.is_black_turn)
         dropped = obj.Run()  # 返回int类型，0-224
 

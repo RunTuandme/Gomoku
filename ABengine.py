@@ -15,7 +15,8 @@ shape_score_black = {
     '011010' : 300,
     '10101'  : 100,
     '001100' : 50,
-    '01010'  : 50
+    '01010'  : 50,
+    '00100'  : 10
     }
 
 shape_score_white = {
@@ -31,17 +32,13 @@ shape_score_white = {
     '022020' : 300,
     '20202'  : 100,
     '002200' : 50,
-    '02020'  : 50
+    '02020'  : 50,
+    '00200'  : 10
     }
 
 import numpy as np
 from profilehooks import profile
 
-class Node:
-    def __init__(self, state: list = None, is_black_turn = True):
-        self.board = state      # 二维棋盘数组1, board[0]为棋盘第一行：[['01000010...'],[...]...]
-        self.is_black_turn = is_black_turn
-                
 class AlphaBetaEngine:
 
     def __init__(self, fen: str = None, is_black_turn = [True]):
@@ -52,7 +49,6 @@ class AlphaBetaEngine:
 
         self.board = self.FenTo2d(self.fen)
         self.div_board = self.DivideBoard(self.board)
-        self.Run()
 
     def FenTo2d(self, fen_x: str) -> list:
         # aim_board:[['01000010...'],[...]...]
@@ -115,11 +111,12 @@ class AlphaBetaEngine:
 
         pos_x, pos_y = line, column
         left = ''
-        while pos_x > 0 and pos_y > 0:
+        while pos_x >= 0 and pos_y >= 0:
             left += state[pos_x][pos_y]
             pos_x -= 1
             pos_y -= 1
-        pos_x, pos_y = line, column
+        pos_x, pos_y = line + 1, column + 1
+        left = ''.join(reversed(left))
         while pos_x < 15 and pos_y < 15:
             left += state[pos_x][pos_y]
             pos_x += 1
@@ -128,12 +125,13 @@ class AlphaBetaEngine:
 
         pos_x, pos_y = line, column
         right = ''
-        while pos_x > 0 and pos_y < 15:
+        while pos_x >= 0 and pos_y < 15:
             right += state[pos_x][pos_y]
             pos_x -= 1
             pos_y += 1
-        pos_x, pos_y = line, column
-        while pos_x < 15 and pos_y > 0:
+        pos_x, pos_y = line + 1, column - 1
+        right = ''.join(reversed(right))
+        while pos_x < 15 and pos_y >= 0:
             right += state[pos_x][pos_y]
             pos_x += 1
             pos_y -= 1
@@ -174,7 +172,7 @@ class AlphaBetaEngine:
             white_score += self.Pick(all_directions, black_turn = False)
         
         if is_black_turn:
-            return black_score - white_score
+            return black_score - white_score  
         else:
             return white_score - black_score
 
@@ -272,7 +270,7 @@ class AlphaBetaEngine:
                 copy_board[move[0]]= copy_board[move[0]][:move[1]] + '2' + copy_board[move[0]][move[1]+1:]
             return copy_board
 
-    @profile
+    #@profile
     def AlphaBeta(self, state: list, depth: int, is_black_turn: bool, 
                   alpha = float('-inf'), beta = float('inf'), 
                   turn_max_player = True) -> tuple:
@@ -307,7 +305,7 @@ class AlphaBetaEngine:
                     return_move = each_move
             return (min_eval, each_move)
         
-    @profile
+    #@profile
     def Minimax(self, state: list, depth: int, is_black_turn: bool, turn_max_player = True) -> tuple:
         # 极大极小值搜索
         if depth == 0 or self.GameOver(state):
@@ -340,25 +338,25 @@ class AlphaBetaEngine:
         # return： e.g(1,2)
         copy_board = state.copy()
         # 方案一： 一层Minimax搜索
-        # moves = self.Moves(copy_board, is_black_turn)
-        # move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        moves = self.Moves(copy_board, is_black_turn)
+        move = max(moves, key = moves.get)  # 取moves中value最大的招法
         # 方案二： 多层Minimax搜索
-        # score, move = self.Minimax(copy_board, 2, is_black_turn)
+        # score, move = self.Minimax(copy_board, 1, is_black_turn)
         # 方案三： 深层AlphaBeta搜索
-        score, move = self.AlphaBeta(copy_board, 2, is_black_turn)
+        # score, move = self.AlphaBeta(copy_board, 6, is_black_turn)
 
         return move
 
     def Run(self):
         if self.fen == '0' * 225:
             return 112
-
+        
         move = self.MakeNextMove(self.board, self.is_black_turn[0])
         return move[0] * 15 + move[1]
     
 
 if __name__ == '__main__':
-    fen = '2'+'0'*100+'1'*2+'0'*122
-    ex = AlphaBetaEngine(fen, [False])
-    print ('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    print (ex.Run())
+    fen = '2' + '0'*111 + '1' + '0'*112
+    ex = AlphaBetaEngine(fen, [True])
+    #print (ex.Moves(ex.board))
+    #print (ex.board)
