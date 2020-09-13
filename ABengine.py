@@ -5,18 +5,23 @@
 shape_score_black = {
     '11111'  : 99999,
     '011110' : 9999,
-    '11110'  : 200,
-    '01111'  : 200,
-    '11011'  : 200,
-    '10111'  : 200,
-    '11101'  : 200,
+    '11110'  : 900,
+    '01111'  : 900,
+    '11011'  : 900,
+    '10111'  : 900,
+    '11101'  : 900,
     '01110'  : 300,
     '010110' : 300,
     '011010' : 300,
     '10101'  : 100,
     '001100' : 50,
     '01010'  : 50,
-    '00100'  : 10
+    '0122200': 50,
+    '0022210': 50,
+    '0012200': 20,
+    '0022100': 20,
+    '0001200': 10,
+    '0021000': 10
     }
 
 shape_score_white = {
@@ -33,10 +38,16 @@ shape_score_white = {
     '20202'  : 100,
     '002200' : 50,
     '02020'  : 50,
-    '00200'  : 10
+    '0211100': 50,
+    '0011120': 50,
+    '0021100': 20,
+    '0011200': 20,
+    '0002100': 10,
+    '0012000': 10
     }
 
 import numpy as np
+import random
 from profilehooks import profile
 
 class AlphaBetaEngine:
@@ -95,6 +106,10 @@ class AlphaBetaEngine:
                 else:
                     white_pieces.append(pos)
         
+        random.shuffle(legal_moves)
+        random.shuffle(black_pieces)
+        random.shuffle(white_pieces)
+
         return [legal_moves, black_pieces, white_pieces]
                 
     def Get4L(self, state: list = None, line = 0, column = 0) -> list:
@@ -276,13 +291,16 @@ class AlphaBetaEngine:
                   turn_max_player = True) -> tuple:
         # 极大值极小值搜索 + αβ剪枝
         if depth == 0 or self.GameOver(state):
-            return (self.evaluation(state = state, is_black_turn = is_black_turn), None)
+            if turn_max_player:
+                return (self.evaluation(state = state, is_black_turn = is_black_turn), None)
+            else:
+                return (-self.evaluation(state = state, is_black_turn = is_black_turn), None)
 
         return_move = None  # 记录待返回招法
         
         if turn_max_player:
             max_eval = float('-inf')
-            for each_move in self.LegalMoves(state = state, is_black_turn = True):
+            for each_move in self.LegalMoves(state, is_black_turn):
                 child = self.ChildBoard(state, each_move, is_black_turn)
                 eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, False)[0]
                 alpha = max(alpha, eval)
@@ -294,7 +312,7 @@ class AlphaBetaEngine:
             return (max_eval, each_move)
         else:
             min_eval = float('inf')
-            for each_move in self.LegalMoves(state = state, is_black_turn = False):
+            for each_move in self.LegalMoves(state, is_black_turn):
                 child = self.ChildBoard(state, each_move, is_black_turn)
                 eval = self.AlphaBeta(child, depth - 1, not is_black_turn, alpha, beta, True)[0]
                 beta = min(beta, eval)
@@ -315,7 +333,7 @@ class AlphaBetaEngine:
 
         if turn_max_player:
             max_eval = float('-inf')
-            for each_move in self.LegalMoves(state = state, is_black_turn = True):
+            for each_move in self.LegalMoves(state, is_black_turn):
                 child = self.ChildBoard(state, each_move, is_black_turn)
                 eval = self.Minimax(child, depth - 1, not is_black_turn, False)[0]
                 if eval > max_eval:
@@ -324,7 +342,7 @@ class AlphaBetaEngine:
             return (max_eval, each_move)
         else:
             min_eval = float('inf')
-            for each_move in self.LegalMoves(state = state, is_black_turn = False):
+            for each_move in self.LegalMoves(state, is_black_turn):
                 child = self.ChildBoard(state, each_move, is_black_turn)
                 eval = self.Minimax(child, depth - 1, not is_black_turn, True)[0]
                 if eval < min_eval:
@@ -338,12 +356,12 @@ class AlphaBetaEngine:
         # return： e.g(1,2)
         copy_board = state.copy()
         # 方案一： 一层Minimax搜索
-        moves = self.Moves(copy_board, is_black_turn)
-        move = max(moves, key = moves.get)  # 取moves中value最大的招法
+        # moves = self.Moves(copy_board, is_black_turn)
+        # move = max(moves, key = moves.get)  # 取moves中value最大的招法
         # 方案二： 多层Minimax搜索
         # score, move = self.Minimax(copy_board, 1, is_black_turn)
         # 方案三： 深层AlphaBeta搜索
-        # score, move = self.AlphaBeta(copy_board, 6, is_black_turn)
+        score, move = self.AlphaBeta(copy_board, 1, is_black_turn)
 
         return move
 
@@ -354,9 +372,32 @@ class AlphaBetaEngine:
         move = self.MakeNextMove(self.board, self.is_black_turn[0])
         return move[0] * 15 + move[1]
     
+    def DrawMoves(self, state: list, is_black_turn: bool):
+        import matplotlib.pyplot as plt
+        moves = self.Moves(state, is_black_turn)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.xaxis.tick_top()
+        ax.set_xlim(-1, 15)
+        ax.set_ylim(top = -1, bottom = 15)
+
+        major_locator=plt.MultipleLocator(1)
+        ax.xaxis.set_major_locator(major_locator)
+        ax.yaxis.set_major_locator(major_locator)
+
+        for key,value in moves.items():
+            ax.text(key[0], key[1], str(value))
+            if is_black_turn:
+                ax.scatter(key[0], key[1], s=10, color='black')
+            else:
+                ax.scatter(key[0], key[1], s=10, color='white')
+        plt.grid()
+        plt.show()
 
 if __name__ == '__main__':
-    fen = '2' + '0'*111 + '1' + '0'*112
-    ex = AlphaBetaEngine(fen, [True])
-    #print (ex.Moves(ex.board))
-    #print (ex.board)
+    fen = '0' + '0'*111 + '1' + '0'*112
+    ex = AlphaBetaEngine(fen, [False])
+    ex.DrawMoves(ex.board, ex.is_black_turn)
+    child = ex.ChildBoard(ex.board, (5,5), ex.is_black_turn)
+    print(ex.evaluation(child, not ex.is_black_turn))
