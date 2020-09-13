@@ -19,6 +19,7 @@
 
 ```
 ├── Gomuku
+│  ├── picture
 │  ├── support              ：辅助脚本
 │  │  ├── buildcor_grid.py  ：生成棋盘网格
 │  │  └── test.txt
